@@ -1,0 +1,23 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+- Find suitable value define in source code
+
+# Component Rules
+
+- **SHOULD** Use Component implemented in @scr/baseComponents/v4.5/*
+- **SHOULD** When update component, follow flow sample releated on context
+- **RECOMMEND** With list use `FLATLIST` instends
+- **RECOMMEND** Create new child pure Component in same file excute not if not found
+
+
+# Styling Rules
+
+- **MUST** Use spacing, margin, padding value defind in (@`spacing.js`)
+- **MUST** Use colors defind in constants file (e.g @`colors.js`) for color component
+- **MUST** Use `ScaleSize` not hard value,
+- **SHOULD** Find, use constant define in `souceBase` advoid create new, or use hard value
+

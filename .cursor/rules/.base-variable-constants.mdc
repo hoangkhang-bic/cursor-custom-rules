@@ -1,0 +1,14 @@
+---
+description: this rule for create new variable constant use for prompts defind
+globs: 
+alwaysApply: false
+---
+**Init value for prompts** 
+-  find folder [prompts-variable] or [promptsVariable] in [.cursor], creat new folder if doesn't had
+-  **MUST** create new file name with format [variable-constant.md]
+-  **MUST** init value from context like sample:
+    `**MUST** use this as variable for prompts when it mention this file
+    - "wrapper-feature" if have in context -> do not create if not mention
+    - "feature-name" if have in context -> do not create if not mention`
+    
+note: don't break rules 

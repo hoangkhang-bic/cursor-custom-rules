@@ -1,0 +1,116 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Project Overview
+
+This project is a React Native mobile application that functions as a social network, similar to Facebook. It is built using React ^17 and React Native 0.71.
+
+# React Native Coding Standards
+
+## Syntax & Formatting
+- **USE** ESLint rules from `eslinttrc.js`
+- **USE** camelCase for variables/functions, PascalCase for components
+- **USE** single quotes for strings
+- **USE** 2 spaces for indentation
+- **USE** arrow functions for callbacks
+- **USE** async/await for async code
+- **USE** `const` for constants, `let` for reassignable variables
+- **USE** destructuring for objects/arrays
+- **USE** template literals for variable strings
+- **USE** latest ES6+/TypeScript features
+- **ALWAYS** define types for variables (avoid `any`)
+- **ALWAYS** set default values for new variables
+- **REQUIRE** Prettier for formatting
+
+## Project Structure
+- **ALWAYS** use `/src` as root for source code, with:
+  - `/api` - API services
+  - `/baseComponents` - Base UI components
+  - `/components` - Reusable UI components
+  - `/configs` - Config files
+  - `/constants` - App constants/enums
+  - `/contexts` - React context providers/consumers
+  - `/helpers` - Helper functions
+  - `/hooks` - Custom hooks
+  - `/interfaces` - TypeScript types/interfaces
+  - `/localization` - i18n config/language files
+  - `/resources` - Asset/resource management
+  - `/router` - Navigation config (react-navigation)
+  - `/screens` - Screen components
+  - `/services` - External integrations
+  - `/store` - Zustand state management
+  - `/storeRedux` - Legacy Redux (deprecated)
+  - `/test` - Test setup/mocks
+  - `/utils` - Utility functions
+- **ALWAYS** place static assets in `/assets` at project root:
+  - `/icons`, `/images`, `/fonts`, `/lottie`, `/reactions`
+- **ALWAYS** organize related components in subdirectories
+- **ALWAYS** separate business logic from UI components
+
+## Component Standards
+- **ALWAYS** follow [component-rules.mdc](mdc:.component-rules.mdc)
+- **RECOMMEND** functional components with hooks
+- **PREFER** small, single-responsibility components
+- **ENFORCE** PascalCase for component names (e.g., `UserProfile.tsx`)
+- **SUGGEST** one component per file
+
+## Styling
+- **ALWAYS** follow [component-rules.mdc](mdc:.component-rules.mdc)
+- **PREFER** `StyleSheet.create()` over inline styles
+- **RECOMMEND** consistent styling (StyleSheet or styled-components)
+- **SUGGEST** design system with theme constants
+- **ALWAYS** implement responsive designs (Dimensions/responsive libs)
+- **ENCOURAGE** reusable style components
+
+## State Management
+- **RECOMMEND** Context API with hooks for simple state
+- **RECOMMEND** Zustand for complex state ([Zustand docs](mdc:https:/zustand.docs.pmnd.rs))
+- **PRIORITIZE** local state over global state when possible
+- **ENFORCE** loading/error states for data fetching
+
+## Performance
+- **ENCOURAGE** `React.memo()` for pure components
+- **SUGGEST** `useCallback()` for child-passed functions
+- **RECOMMEND** `useMemo()` for expensive calculations
+- **ALWAYS** virtualize long lists with `FlatList`
+- **ENFORCE** image optimization best practices
+
+## Navigation
+- **PREFER** custom navigation functions if present
+- **PREFER** React Navigation for consistency
+- **SUGGEST** logical navigation structure (stack/tab/drawer)
+- **ADVISE** separate navigation logic from screens
+
+## Testing
+- **RECOMMEND** unit tests for components/logic
+- **SUGGEST** React Native Testing Library for components
+- **ENCOURAGE** E2E testing (Detox/Maestro)
+- **AIM** for good test coverage on core features
+
+## Code Quality
+- **ENFORCE** ESLint with React Native configs
+- **REQUIRE** Prettier for formatting
+- **RECOMMEND** TypeScript for type safety
+- **ENCOURAGE** JSDoc for complex components
+- **ENFORCE** PropTypes or TypeScript interfaces for props
+
+## Platform-Specific Code
+- **USE** `Platform.OS` for conditional rendering
+- **CREATE** `.ios.ts`/`.android.ts` files as needed
+- **MINIMIZE** platform-specific code
+
+## Security
+- **NEVER** store sensitive data unencrypted
+- **IMPLEMENT** proper authentication flows
+- **SANITIZE** all user inputs
+- **USE** secure communication (HTTPS)
+- **FOLLOW** mobile security best practices
+
+## Code Review Guidelines
+- **ANALYZE** for compliance with these standards
+- **SUGGEST** specific improvements
+- **PROVIDE** code examples for best practices
+- **EXPLAIN** reasoning for recommendations
+- **PRIORITIZE** readability and maintainability
