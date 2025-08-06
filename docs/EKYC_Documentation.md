@@ -7,6 +7,32 @@ The Electronic Know Your Customer (EKYC) system provides identity verification f
 1. **Automatic Verification**: Uses SDK integration for automated ID card and face verification
 2. **Manual Verification**: Fallback option when automatic verification fails, allowing users to manually submit their information and documents
 
+### Tổng quan hệ thống
+
+```mermaid
+flowchart TD
+    subgraph Components[Các thành phần chính của hệ thống EKYC]
+        Store[EKYC Store<br>Zustand]
+        API[API Integration]
+        Camera[Camera Components]
+        Form[Form Components]
+        Tracking[Analytics Tracking]
+
+        Store -->|State Management| Camera
+        Store -->|State Management| Form
+        Store -->|State Management| API
+
+        Camera -->|Image Data| Store
+        Form -->|User Data| Store
+        Store -->|Submit Data| API
+        API -->|Response Data| Store
+
+        Tracking -->|Event Tracking| Camera
+        Tracking -->|Event Tracking| Form
+        Tracking -->|Event Tracking| API
+    end
+```
+
 ## System Architecture
 
 ### Key Components
@@ -66,6 +92,59 @@ src/screens/Menu/EKYC/
    - Reviews information in `EKYCManualReview.tsx`
    - Submits for manual review by admin using `ekycManualSubmit.ts`
    - User can check status and resubmit if rejected
+
+### Biểu đồ luồng EKYC
+
+```mermaid
+flowchart TD
+    Start[Người dùng bắt đầu EKYC] --> Intro[Màn hình giới thiệu]
+    Intro --> IDChoice[Chọn loại giấy tờ]
+    IDChoice --> AutoFlow[Luồng xác thực tự động]
+
+    subgraph AutoFlow[Luồng xác thực tự động]
+        FrontID[Chụp mặt trước CCCD/Passport] --> VerifyFront[Xác thực mặt trước]
+        VerifyFront -->|Thành công| BackID[Chụp mặt sau CCCD]
+        VerifyFront -->|Thất bại| RetryFront[Thử lại]
+        RetryFront --> MaxAttempt{Đã đạt giới hạn?}
+        MaxAttempt -->|Có| Manual
+        MaxAttempt -->|Không| FrontID
+
+        BackID --> VerifyBack[Xác thực mặt sau]
+        VerifyBack -->|Thành công| FaceCapture[Chụp khuôn mặt]
+        VerifyBack -->|Thất bại| RetryBack[Thử lại]
+        RetryBack --> MaxAttemptBack{Đã đạt giới hạn?}
+        MaxAttemptBack -->|Có| Manual
+        MaxAttemptBack -->|Không| BackID
+
+        FaceCapture --> VerifyFace[Xác thực khuôn mặt]
+        VerifyFace -->|Thành công| Success[Xác thực thành công]
+        VerifyFace -->|Thất bại| RetryFace[Thử lại]
+        RetryFace --> MaxAttemptFace{Đã đạt giới hạn?}
+        MaxAttemptFace -->|Có| Manual
+        MaxAttemptFace -->|Không| FaceCapture
+    end
+
+    Manual[Chuyển sang xác thực thủ công] --> ManualFlow[Luồng xác thực thủ công]
+
+    subgraph ManualFlow[Luồng xác thực thủ công]
+        FormEntry[Nhập thông tin cá nhân] --> CaptureIDFront[Chụp mặt trước CCCD/Passport]
+        CaptureIDFront --> CaptureIDBack[Chụp mặt sau CCCD]
+        CaptureIDBack --> CaptureFace[Chụp khuôn mặt]
+        CaptureFace --> Review[Xem lại thông tin]
+        Review -->|Chỉnh sửa| FormEntry
+        Review -->|Xác nhận| Submit[Gửi xác thực]
+        Submit --> Pending[Chờ xét duyệt]
+        Pending --> CheckStatus[Kiểm tra trạng thái]
+        CheckStatus -->|Đã duyệt| Approved[Xác thực thành công]
+        CheckStatus -->|Từ chối| Rejected[Xác thực thất bại]
+        Rejected --> ViewReason[Xem lý do từ chối]
+        ViewReason --> Resubmit[Gửi lại]
+        Resubmit --> FormEntry
+    end
+
+    Success --> End[Hoàn thành EKYC]
+    Approved --> End
+```
 
 ## State Management
 
@@ -175,6 +254,77 @@ Images are handled using the utilities in `imageUtils.ts`:
 7. User submits for manual review
 8. User can check status and resubmit if rejected
 
+### Biểu đồ trạng thái EKYC
+
+```mermaid
+stateDiagram-v2
+    [*] --> INTRO: Bắt đầu EKYC
+
+    state "Luồng tự động" as Auto {
+        INTRO --> CHOOSE_TYPE_ID: Chọn loại giấy tờ
+        CHOOSE_TYPE_ID --> FRONT_ID_CAPTURE: Chụp mặt trước
+        FRONT_ID_CAPTURE --> FRONT_ID_VERIFY: Xác thực
+
+        state FRONT_ID_VERIFY {
+            [*] --> PROCESSING: Đang xử lý
+            PROCESSING --> SUCCESS: Thành công
+            PROCESSING --> FAILURE: Thất bại
+            FAILURE --> [*]: Thử lại
+        }
+
+        FRONT_ID_VERIFY --> BACK_ID_CAPTURE: Thành công
+        BACK_ID_CAPTURE --> BACK_ID_VERIFY: Xác thực
+
+        state BACK_ID_VERIFY {
+            [*] --> BACK_PROCESSING: Đang xử lý
+            BACK_PROCESSING --> BACK_SUCCESS: Thành công
+            BACK_PROCESSING --> BACK_FAILURE: Thất bại
+            BACK_FAILURE --> [*]: Thử lại
+        }
+
+        BACK_ID_VERIFY --> FACE_CAPTURE: Thành công
+        FACE_CAPTURE --> FACE_VERIFY: Xác thực
+
+        state FACE_VERIFY {
+            [*] --> FACE_PROCESSING: Đang xử lý
+            FACE_PROCESSING --> FACE_SUCCESS: Thành công
+            FACE_PROCESSING --> FACE_FAILURE: Thất bại
+            FACE_FAILURE --> [*]: Thử lại
+        }
+
+        FACE_VERIFY --> CONFIRM_INFORMATION: Thành công
+        CONFIRM_INFORMATION --> RESULT: Xác nhận
+    }
+
+    state "Luồng thủ công" as Manual {
+        state MANUAL_EKYC_STATE {
+            [*] --> CREATED: Khởi tạo form
+            CREATED --> TAKE_FRONT_SIDE: Chụp mặt trước
+            TAKE_FRONT_SIDE --> TAKE_BACK_SIDE: Chụp mặt sau
+            TAKE_BACK_SIDE --> TAKE_FACE: Chụp khuôn mặt
+            TAKE_FACE --> REVIEW: Xem lại
+            REVIEW --> EDIT: Chỉnh sửa
+            EDIT --> REVIEW: Quay lại xem lại
+            REVIEW --> CONFIRM: Xác nhận
+            CONFIRM --> SUBMITTED: Gửi xét duyệt
+            SUBMITTED --> PENDING: Chờ duyệt
+            PENDING --> APPROVED: Được duyệt
+            PENDING --> REJECT: Từ chối
+            REJECT --> EDIT: Chỉnh sửa và gửi lại
+        }
+    }
+
+    state MAX_ATTEMPTS <<fork>>
+    FRONT_ID_VERIFY --> MAX_ATTEMPTS: Vượt quá số lần thử
+    BACK_ID_VERIFY --> MAX_ATTEMPTS: Vượt quá số lần thử
+    FACE_VERIFY --> MAX_ATTEMPTS: Vượt quá số lần thử
+
+    MAX_ATTEMPTS --> MANUAL_EKYC_STATE: Chuyển sang xác thực thủ công
+
+    RESULT --> [*]: Hoàn thành
+    APPROVED --> [*]: Hoàn thành
+```
+
 ## Analytics Tracking
 
 The system uses `useManualEkycTracking.ts` to track user journey:
@@ -232,6 +382,85 @@ This hook manages the maximum verification attempts:
 - Tracks number of attempts
 - Shows alert when maximum attempts reached
 - Redirects to manual verification
+
+### Biểu đồ tuần tự EKYC
+
+```mermaid
+sequenceDiagram
+    participant User as Người dùng
+    participant UI as UI Components
+    participant Store as EKYC Store
+    participant SDK as EKYC SDK
+    participant API as Backend API
+    participant Admin as Admin System
+
+    User->>UI: Bắt đầu EKYC
+    UI->>Store: Khởi tạo state
+
+    %% Automatic Flow
+    User->>UI: Chọn loại ID (CCCD/Passport)
+    UI->>Store: setIDType()
+    User->>SDK: Chụp mặt trước ID
+    SDK->>Store: Lưu ảnh
+    Store->>API: ekycIDCheck()
+    API-->>Store: Kết quả xác thực
+
+    alt Xác thực mặt trước thành công
+        User->>SDK: Chụp mặt sau ID
+        SDK->>Store: Lưu ảnh
+        Store->>API: ekycIDCheck()
+        API-->>Store: Kết quả xác thực
+
+        alt Xác thực mặt sau thành công
+            User->>SDK: Chụp khuôn mặt
+            SDK->>Store: Lưu ảnh
+            Store->>API: ekycFaceCheck()
+            API-->>Store: Kết quả xác thực khuôn mặt
+
+            alt Xác thực khuôn mặt thành công
+                Store->>UI: Hiển thị thành công
+                UI->>User: Thông báo xác thực thành công
+            else Xác thực khuôn mặt thất bại
+                Store->>UI: Hiển thị lỗi
+                UI->>User: Thông báo thử lại
+            end
+        else Xác thực mặt sau thất bại
+            Store->>UI: Hiển thị lỗi
+            UI->>User: Thông báo thử lại
+        end
+    else Xác thực mặt trước thất bại
+        Store->>UI: Hiển thị lỗi
+        UI->>User: Thông báo thử lại
+    end
+
+    %% Manual Flow after maximum attempts
+    alt Vượt quá số lần thử
+        Store->>UI: Chuyển sang xác thực thủ công
+        UI->>User: Hiển thị form xác thực thủ công
+        User->>UI: Nhập thông tin cá nhân
+        UI->>Store: setManualEKYCInfo()
+        User->>UI: Chụp ảnh ID và khuôn mặt
+        UI->>Store: setManualEKYCImage()
+        User->>UI: Xem lại và xác nhận
+        UI->>Store: ekycManualSubmit()
+        Store->>API: Gửi thông tin xác thực thủ công
+        API-->>Store: Xác nhận đã nhận
+        Store->>UI: Hiển thị trạng thái chờ duyệt
+        UI->>User: Thông báo đã gửi, chờ duyệt
+
+        %% Admin review process
+        API->>Admin: Gửi yêu cầu xét duyệt
+        Admin-->>API: Kết quả xét duyệt
+
+        %% User checks status later
+        User->>UI: Kiểm tra trạng thái
+        UI->>Store: getLatestManualEkyc()
+        Store->>API: Lấy trạng thái mới nhất
+        API-->>Store: Trạng thái xét duyệt
+        Store->>UI: Cập nhật UI
+        UI->>User: Hiển thị kết quả xét duyệt
+    end
+```
 
 ## Integration with External Systems
 
@@ -293,6 +522,97 @@ To test the EKYC system:
 2. **Enhanced Image Processing**: Improve image quality checks before submission
 3. **Multi-language Support**: Extend support for more languages
 4. **Accessibility Improvements**: Enhance for users with disabilities
+
+## Cấu trúc lớp
+
+```mermaid
+classDiagram
+    class EKYCStore {
+        +idType: EKYC_ID_TYPE
+        +loading: boolean
+        +currentStep: VERIFY_STEP
+        +errorText: string
+        +verificationInfo: IdentityInformation
+        +manualEKYCInfo: object
+        +manualEKYCImage: object
+        +setIDType()
+        +ekycIDCheck()
+        +ekycFaceCheck()
+        +uploadEkycImage()
+        +setManualEKYCInfo()
+        +setManualEKYCImage()
+        +ekycManualSubmit()
+        +getLatestManualEkyc()
+    }
+
+    class EKYCScreen {
+        +handleBack()
+        +onBackToHome()
+        +onTryAgain()
+        +onPressButton()
+        +renderContent()
+        +renderFaceLivenessResult()
+    }
+
+    class EKYCManualForm {
+        +form: FormData
+        +handleSubmit()
+        +handleImageCapture()
+        +navigateToCamera()
+        +renderFormFields()
+        +renderImageSection()
+    }
+
+    class EKYCManualReview {
+        +handleEdit()
+        +handleSubmit()
+        +renderFormFields()
+        +renderImageSection()
+    }
+
+    class SimpleCameraPage {
+        +onTakePicture()
+        +handleShowInstructions()
+        +renderCamera()
+    }
+
+    class useManualEkycTracking {
+        +trackManualEkycStarted()
+        +trackManualEkycInfoLoaded()
+        +trackManualEkycCameraOpened()
+        +trackManualEkycPhotoConfirmed()
+        +trackManualEkycPreviewViewed()
+        +trackManualEkycSubmitted()
+    }
+
+    class useMaxAttemptController {
+        +onManualEKYCForm()
+        +onRedirectToManualEKYCForm()
+    }
+
+    class imageUtils {
+        +getEkycImageUrl()
+        +fetchEkycImageAsUri()
+        +createEkycImageSource()
+    }
+
+    EKYCStore <-- EKYCScreen: uses
+    EKYCStore <-- EKYCManualForm: uses
+    EKYCStore <-- EKYCManualReview: uses
+    EKYCStore <-- SimpleCameraPage: uses
+
+    EKYCScreen --> EKYCManualForm: navigates to
+    EKYCManualForm --> SimpleCameraPage: navigates to
+    EKYCManualForm --> EKYCManualReview: navigates to
+
+    EKYCScreen --> useMaxAttemptController: uses
+    EKYCManualForm --> useManualEkycTracking: uses
+    EKYCManualReview --> useManualEkycTracking: uses
+    SimpleCameraPage --> useManualEkycTracking: uses
+
+    EKYCManualReview --> imageUtils: uses
+    SimpleCameraPage --> imageUtils: uses
+```
 
 ## Conclusion
 
